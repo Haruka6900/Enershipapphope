@@ -43,5 +43,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: EnerShip-debug
-          path: app/build/outputs/apk/**/*.apk
+          path: |
+            app/build/outputs/apk/**/*.apk
+            **/build/outputs/apk/**/*.apk
           if-no-files-found: error
