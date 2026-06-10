@@ -632,7 +632,7 @@
 //   rpm       → tr/min (Hall, SIM_RPM_MAX = 3000)
 //   courant[] → A    (ACS712-20A, 8 capteurs via MUX1)
 //   tension[] → V    (diviseur 5:1, 8 capteurs via MUX2, plage 0-25V)
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════���═══════════════════════════════════════════════════════
 const STATE = {
   role: 'visitor',
   btConnected: false,
@@ -1286,6 +1286,22 @@ function connectDevice(name) {
   addLog('Bluetooth connecté : ' + name);
 }
 
+// Callback générique de connexion réussie (Android natif ou Web BT)
+function onConnected(name) {
+  connectDevice(name);
+}
+
+// Callback générique de déconnexion
+function onDisconnected(reason) {
+  STATE.btConnected = false;
+  STATE.btCharacteristic = null;
+  document.getElementById('bt-dot').classList.remove('connected');
+  document.getElementById('bt-label').textContent = 'Déconnecté';
+  document.getElementById('sb-refresh').textContent = STATE.simMode ? 'Simulation' : 'Live BT';
+  showToast('Bluetooth déconnecté : ' + reason);
+  addLog('Bluetooth déconnecté : ' + reason);
+}
+
 async function connectWebBluetooth() {
   try {
     const device = await navigator.bluetooth.requestDevice({
@@ -1453,10 +1469,12 @@ if (IS_ANDROID_APP) {
 
 function androidScanDevices() {
   const devDiv = document.getElementById('bt-devices');
-  // Cacher les panneaux Serial/BLE, montrer uniquement le scan natif
-  document.getElementById('panel-serial').style.display = 'none';
-  document.getElementById('panel-ble').style.display    = 'none';
-  document.getElementById('bt-info-banner').style.display = 'none';
+  // Masquer les panneaux optionnels s'ils existent (null-safe selon la version du DOM)
+  const hide = id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
+  hide('panel-serial');
+  hide('panel-ble');
+  hide('bt-info-banner');
+  hide('bt-scanning');
   document.querySelectorAll('.conn-tab').forEach(t => t.style.display = 'none');
 
   devDiv.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted)"><span class="pulse">🔍 Scan Bluetooth HC-06…</span></div>';
@@ -1466,19 +1484,19 @@ function androidScanDevices() {
     const devices = JSON.parse(paired);
     devDiv.innerHTML = '';
     if (devices.length === 0) {
-      devDiv.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px">Aucun appareil jumelé.<br>Jumelez d'abord le HC-06 dans les paramètres Bluetooth Android.</div>';
+      devDiv.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px">Aucun appareil jumelé.<br>Jumelez d\'abord le HC-06 dans les paramètres Bluetooth Android.</div>';
       return;
     }
     devices.forEach(dev => {
       const div = document.createElement('div');
       div.className = 'device-item';
-      div.innerHTML = \`
+      div.innerHTML = `
         <div class="device-icon">📶</div>
         <div style="flex:1">
-          <div class="device-name">\${dev.name}</div>
-          <div class="device-mac">\${dev.address}</div>
+          <div class="device-name">${dev.name}</div>
+          <div class="device-mac">${dev.address}</div>
         </div>
-        <button class="btn-sm btn-accent" onclick="androidConnect('\${dev.address}','\${dev.name}')">Connecter</button>\`;
+        <button class="btn-sm btn-accent" onclick="androidConnect('${dev.address}','${dev.name}')">Connecter</button>`;
       devDiv.appendChild(div);
     });
   } catch(e) {
